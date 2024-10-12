@@ -29,7 +29,7 @@ const App = () => {
                 <ParameterControls onParameterChange={handleParameterChange} />
                 <SimulationDisplay />
                 <ControlButtons onStart={handleStart} onPause={handlePause} onReset={handleReset} />
-                <Catchpits />
+                <Catchpits/>
             </div>
         </div>
     );

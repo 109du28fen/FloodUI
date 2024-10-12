@@ -1,558 +1,140 @@
-import React, { useState } from 'react';
-import { Scatter } from 'react-chartjs-2';
-import { Chart as ChartJS } from 'chart.js/auto';
+import React, { useState, useEffect } from 'react';
+import { MapContainer, ImageOverlay, CircleMarker, useMap } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+import newAreaDataImage from './new_area_Data.png';
+
+const CatchpitsMarkers = ({ catchpits, toggleBlocked, xAdjust, yAdjust }) => {
+    const map = useMap();
+
+    return (
+        <>
+            {catchpits.map((feature) => {
+                const [longitude, latitude] = feature.geometry.coordinates;
+                const isBlocked = feature.properties.blocked;
+                const key = feature.id || feature.properties.id;
+
+                // Convert lat/lng to layer point
+                const latLng = L.latLng(latitude, longitude);
+                const point = map.latLngToLayerPoint(latLng);
+
+                // Apply pixel adjustments
+                point.x += xAdjust;
+                point.y += yAdjust;
+
+                // Convert back to lat/lng
+                const adjustedLatLng = map.layerPointToLatLng(point);
+
+                return (
+                    <CircleMarker
+                        key={key}
+                        center={[adjustedLatLng.lat, adjustedLatLng.lng]}
+                        radius={5}
+                        color={isBlocked ? 'red' : 'green'}
+                        eventHandlers={{
+                            click: () => {
+                                toggleBlocked(key);
+                            },
+                        }}
+                    />
+                );
+            })}
+        </>
+    );
+};
 
 const Catchpits = () => {
-  // Sample data for catchpits
-  const initialData = [
-    { id: 1, x: 1756862.263, y: 5931983.146, blocked: false },
-{ id: 2, x: 1755863.198, y: 5931061.647, blocked: false },
-{ id: 3, x: 1756964.497, y: 5931645.008, blocked: false },
-{ id: 4, x: 1756970.782, y: 5930847.884, blocked: false },
-{ id: 5, x: 1757141.443, y: 5931705.025, blocked: false },
-{ id: 6, x: 1757197.102, y: 5930594.946, blocked: false },
-{ id: 7, x: 1757009.76, y: 5930483.961, blocked: false },
-{ id: 8, x: 1756723.59, y: 5931499.486, blocked: false },
-{ id: 9, x: 1756158.355, y: 5930983.157, blocked: false },
-{ id: 10, x: 1757242.824, y: 5931675.889, blocked: false },
-{ id: 11, x: 1757315.879, y: 5930610.118, blocked: false },
-{ id: 12, x: 1756198.807, y: 5931705.048, blocked: false },
-{ id: 13, x: 1756954.287, y: 5930527.147, blocked: false },
-{ id: 14, x: 1756624.562, y: 5931467.913, blocked: false },
-{ id: 15, x: 1757041.196, y: 5931598.374, blocked: false },
-{ id: 16, x: 1755679.749, y: 5931439.782, blocked: false },
-{ id: 17, x: 1756059.454, y: 5931060.561, blocked: false },
-{ id: 18, x: 1755767.98, y: 5931697.284, blocked: false },
-{ id: 19, x: 1756139.654, y: 5930894.475, blocked: false },
-{ id: 20, x: 1756155.077, y: 5930673.09, blocked: false },
-{ id: 21, x: 1755822.141, y: 5931012.3, blocked: false },
-{ id: 22, x: 1756736.284, y: 5931948.122, blocked: false },
-{ id: 23, x: 1756332.571, y: 5930977.414, blocked: false },
-{ id: 24, x: 1756663.648, y: 5931497.498, blocked: false },
-{ id: 25, x: 1757332.77, y: 5931009.645, blocked: false },
-{ id: 26, x: 1755999.306, y: 5931329.507, blocked: false },
-{ id: 27, x: 1755805.796, y: 5931728.863, blocked: false },
-{ id: 28, x: 1757694.474, y: 5930581.327, blocked: false },
-{ id: 29, x: 1757376.916, y: 5931812.736, blocked: false },
-{ id: 30, x: 1755670.497, y: 5930589.329, blocked: false },
-{ id: 31, x: 1756295.403, y: 5931743.271, blocked: false },
-{ id: 32, x: 1755662.953, y: 5930714.672, blocked: false },
-{ id: 33, x: 1755991.844, y: 5930858.16, blocked: false },
-{ id: 34, x: 1756070.974, y: 5931052.029, blocked: false },
-{ id: 35, x: 1755664.962, y: 5930941.075, blocked: false },
-{ id: 36, x: 1756283.853, y: 5930794.107, blocked: false },
-{ id: 37, x: 1756063.081, y: 5931679.849, blocked: false },
-{ id: 38, x: 1755869.415, y: 5931409.954, blocked: false },
-{ id: 39, x: 1756187.207, y: 5930545.149, blocked: false },
-{ id: 40, x: 1756821.861, y: 5931705.104, blocked: false },
-{ id: 41, x: 1756307.638, y: 5930680.107, blocked: false },
-{ id: 42, x: 1755681.225, y: 5931630.216, blocked: false },
-{ id: 43, x: 1756129.476, y: 5931186.482, blocked: false },
-{ id: 44, x: 1755753.26, y: 5931461.042, blocked: false },
-{ id: 45, x: 1756079.671, y: 5931846.121, blocked: false },
-{ id: 46, x: 1756903.079, y: 5931604.312, blocked: false },
-{ id: 47, x: 1755797.847, y: 5931202.024, blocked: false },
-{ id: 48, x: 1757148.532, y: 5931565.779, blocked: false },
-{ id: 49, x: 1756316.897, y: 5931010.841, blocked: false },
-{ id: 50, x: 1756254.666, y: 5931029.789, blocked: false },
-{ id: 51, x: 1756014.697, y: 5930696.905, blocked: false },
-{ id: 52, x: 1755847.062, y: 5931493.041, blocked: false },
-{ id: 53, x: 1755612.161, y: 5930750.228, blocked: false },
-{ id: 54, x: 1756985.886, y: 5930879.752, blocked: false },
-{ id: 55, x: 1756287.899, y: 5931070.613, blocked: false },
-{ id: 56, x: 1756015.713, y: 5931055.218, blocked: false },
-{ id: 57, x: 1756869.069, y: 5931978.953, blocked: false },
-{ id: 58, x: 1757391.885, y: 5930723.996, blocked: false },
-{ id: 59, x: 1757521.131, y: 5930590.512, blocked: false },
-{ id: 60, x: 1756528.926, y: 5930563.408, blocked: false },
-{ id: 61, x: 1756730.743, y: 5931499.35, blocked: false },
-{ id: 62, x: 1755753.832, y: 5930899.509, blocked: false },
-{ id: 63, x: 1756760.638, y: 5931611.101, blocked: false },
-{ id: 64, x: 1757137.52, y: 5931696.001, blocked: false },
-{ id: 65, x: 1755730.773, y: 5930509.282, blocked: false },
-{ id: 66, x: 1756156.054, y: 5930781.679, blocked: false },
-{ id: 67, x: 1757321.388, y: 5931667.791, blocked: false },
-{ id: 68, x: 1756169.362, y: 5930489.107, blocked: false },
-{ id: 69, x: 1757159.758, y: 5931952.717, blocked: false },
-{ id: 70, x: 1755730.733, y: 5931975.353, blocked: false },
-{ id: 71, x: 1756129.295, y: 5931965.508, blocked: false },
-{ id: 72, x: 1756044.046, y: 5930837.408, blocked: false },
-{ id: 73, x: 1756123.213, y: 5931028.206, blocked: false },
-{ id: 74, x: 1757427.702, y: 5930992.14, blocked: false },
-{ id: 75, x: 1757135.354, y: 5931841.807, blocked: false },
-{ id: 76, x: 1757463.386, y: 5930574.578, blocked: false },
-{ id: 77, x: 1756882.172, y: 5931952.635, blocked: false },
-{ id: 78, x: 1756090.569, y: 5931078.762, blocked: false },
-{ id: 79, x: 1755807.517, y: 5931609.476, blocked: false },
-{ id: 80, x: 1756593.083, y: 5931501.926, blocked: false },
-{ id: 81, x: 1756487.16, y: 5931800.169, blocked: false },
-{ id: 82, x: 1756731.764, y: 5931512.048, blocked: false },
-{ id: 83, x: 1757345.77, y: 5931545.189, blocked: false },
-{ id: 84, x: 1756030.812, y: 5930668.807, blocked: false },
-{ id: 85, x: 1755820.883, y: 5930812.028, blocked: false },
-{ id: 86, x: 1755654.415, y: 5930797.743, blocked: false },
-{ id: 87, x: 1757298.267, y: 5931090.387, blocked: false },
-{ id: 88, x: 1755939.713, y: 5931514.451, blocked: false },
-{ id: 89, x: 1756346.328, y: 5931792.477, blocked: false },
-{ id: 90, x: 1755615.548, y: 5930586.596, blocked: false },
-{ id: 91, x: 1757317.31, y: 5931258.443, blocked: false },
-{ id: 92, x: 1755788.08, y: 5931155.336, blocked: false },
-{ id: 93, x: 1755874.601, y: 5930485.456, blocked: false },
-{ id: 94, x: 1755991.275, y: 5931679.943, blocked: false },
-{ id: 95, x: 1757082.843, y: 5930628.205, blocked: false },
-{ id: 96, x: 1756670.529, y: 5931946.007, blocked: false },
-{ id: 97, x: 1756321.382, y: 5931055.442, blocked: false },
-{ id: 98, x: 1756907.289, y: 5930787.709, blocked: false },
-{ id: 99, x: 1755714.302, y: 5931919.165, blocked: false },
-{ id: 100, x: 1756912.35, y: 5931442.661, blocked: false },
-{ id: 101, x: 1755908.147, y: 5930650.829, blocked: false },
-{ id: 102, x: 1756260.42, y: 5931852.201, blocked: false },
-{ id: 103, x: 1755748.53, y: 5930919.18, blocked: false },
-{ id: 104, x: 1757494.613, y: 5930772.424, blocked: false },
-{ id: 105, x: 1755747.789, y: 5931203.144, blocked: false },
-{ id: 106, x: 1756074.548, y: 5930524.247, blocked: false },
-{ id: 107, x: 1757733.411, y: 5930477.25, blocked: false },
-{ id: 108, x: 1757254.456, y: 5931996.549, blocked: false },
-{ id: 109, x: 1757617.019, y: 5930673.265, blocked: false },
-{ id: 110, x: 1755654.363, y: 5931559.757, blocked: false },
-{ id: 111, x: 1757543.416, y: 5930579.608, blocked: false },
-{ id: 112, x: 1755832.033, y: 5931317.959, blocked: false },
-{ id: 113, x: 1756116.8, y: 5931973.5, blocked: false },
-{ id: 114, x: 1756982.502, y: 5930812.726, blocked: false },
-{ id: 115, x: 1757328.85, y: 5931119.3, blocked: false },
-{ id: 116, x: 1757459.561, y: 5930894.68, blocked: false },
-{ id: 117, x: 1757428.794, y: 5930626.337, blocked: false },
-{ id: 118, x: 1755727.676, y: 5930501.934, blocked: false },
-{ id: 119, x: 1755984.896, y: 5931081.671, blocked: false },
-{ id: 120, x: 1755758.048, y: 5930937.257, blocked: false },
-{ id: 121, x: 1757349.92, y: 5931139.93, blocked: false },
-{ id: 122, x: 1757272.942, y: 5931680.07, blocked: false },
-{ id: 123, x: 1756736.963, y: 5931403.798, blocked: false },
-{ id: 124, x: 1756662.308, y: 5931732.896, blocked: false },
-{ id: 125, x: 1757379.784, y: 5931251.184, blocked: false },
-{ id: 126, x: 1756818.626, y: 5930696.352, blocked: false },
-{ id: 127, x: 1756269.166, y: 5930499.817, blocked: false },
-{ id: 128, x: 1756164.658, y: 5930729.122, blocked: false },
-{ id: 129, x: 1757179.256, y: 5930755.692, blocked: false },
-{ id: 130, x: 1755879.28, y: 5930818.376, blocked: false },
-{ id: 131, x: 1755987.992, y: 5930870.529, blocked: false },
-{ id: 132, x: 1756715.746, y: 5931386.404, blocked: false },
-{ id: 133, x: 1757286.95, y: 5931650.409, blocked: false },
-{ id: 134, x: 1757349.291, y: 5931557.073, blocked: false },
-{ id: 135, x: 1755743.001, y: 5930865.521, blocked: false },
-{ id: 136, x: 1757062.57, y: 5930709.96, blocked: false },
-{ id: 137, x: 1756013.584, y: 5931101.663, blocked: false },
-{ id: 138, x: 1755886.7, y: 5931208.78, blocked: false },
-{ id: 139, x: 1757700.431, y: 5930605.993, blocked: false },
-{ id: 140, x: 1755810.28, y: 5931597.61, blocked: false },
-{ id: 141, x: 1755799.245, y: 5931759.494, blocked: false },
-{ id: 142, x: 1757116.066, y: 5931891.544, blocked: false },
-{ id: 143, x: 1756556.578, y: 5931503.345, blocked: false },
-{ id: 144, x: 1756426.997, y: 5931907.911, blocked: false },
-{ id: 145, x: 1757033.493, y: 5931909.104, blocked: false },
-{ id: 146, x: 1757393.623, y: 5931372.216, blocked: false },
-{ id: 147, x: 1755801.661, y: 5930806.595, blocked: false },
-{ id: 148, x: 1757252.422, y: 5931079.866, blocked: false },
-{ id: 149, x: 1756732.937, y: 5930620.646, blocked: false },
-{ id: 150, x: 1756344.127, y: 5930958.647, blocked: false },
-{ id: 151, x: 1757400.612, y: 5930708.386, blocked: false },
-{ id: 152, x: 1755693.226, y: 5930600.445, blocked: false },
-{ id: 153, x: 1755682.796, y: 5931262.44, blocked: false },
-{ id: 154, x: 1756667.291, y: 5931993.312, blocked: false },
-{ id: 155, x: 1757071.913, y: 5930970.941, blocked: false },
-{ id: 156, x: 1757055.946, y: 5931474.246, blocked: false },
-{ id: 157, x: 1755870.061, y: 5930491.608, blocked: false },
-{ id: 158, x: 1756300.88, y: 5931032.757, blocked: false },
-{ id: 159, x: 1755825.032, y: 5931988.42, blocked: false },
-{ id: 160, x: 1756053.231, y: 5930728.866, blocked: false },
-{ id: 161, x: 1756898.664, y: 5930795.411, blocked: false },
-{ id: 162, x: 1755958.802, y: 5930892.951, blocked: false },
-{ id: 163, x: 1755903.843, y: 5930810.683, blocked: false },
-{ id: 164, x: 1755891.886, y: 5930614.543, blocked: false },
-{ id: 165, x: 1756607.6, y: 5931730.9, blocked: false },
-{ id: 166, x: 1756908.4, y: 5931452.3, blocked: false },
-{ id: 167, x: 1755732.671, y: 5931213.665, blocked: false },
-{ id: 168, x: 1755741.262, y: 5930712.157, blocked: false },
-{ id: 169, x: 1756706.932, y: 5931660.041, blocked: false },
-{ id: 170, x: 1755823.596, y: 5931319.107, blocked: false },
-{ id: 171, x: 1757367.913, y: 5930751.787, blocked: false },
-{ id: 172, x: 1755753.596, y: 5931638.74, blocked: false },
-{ id: 173, x: 1755618.115, y: 5930740.441, blocked: false },
-{ id: 174, x: 1756662.046, y: 5931988.699, blocked: false },
-{ id: 175, x: 1757321.589, y: 5931684.826, blocked: false },
-{ id: 176, x: 1756473.962, y: 5931841.078, blocked: false },
-{ id: 177, x: 1757361.622, y: 5930975.252, blocked: false },
-{ id: 178, x: 1757198.574, y: 5931269.534, blocked: false },
-{ id: 179, x: 1756176.082, y: 5930610.4, blocked: false },
-{ id: 180, x: 1756608.755, y: 5930527.759, blocked: false },
-{ id: 181, x: 1756721.363, y: 5931598.568, blocked: false },
-{ id: 182, x: 1757199.923, y: 5930586.655, blocked: false },
-{ id: 183, x: 1756104.01, y: 5930558.676, blocked: false },
-{ id: 184, x: 1756991.341, y: 5930874.393, blocked: false },
-{ id: 185, x: 1755641.0, y: 5931558.983, blocked: false },
-{ id: 186, x: 1756175.437, y: 5930969.115, blocked: false },
-{ id: 187, x: 1757300.042, y: 5931665.531, blocked: false },
-{ id: 188, x: 1757158.8, y: 5931686.1, blocked: false },
-{ id: 189, x: 1756963.986, y: 5931638.826, blocked: false },
-{ id: 190, x: 1756039.2, y: 5930868.3, blocked: false },
-{ id: 191, x: 1757465.898, y: 5930585.188, blocked: false },
-{ id: 192, x: 1755790.81, y: 5931736.167, blocked: false },
-{ id: 193, x: 1757155.107, y: 5931882.603, blocked: false },
-{ id: 194, x: 1756730.718, y: 5931501.397, blocked: false },
-{ id: 195, x: 1756540.72, y: 5931770.846, blocked: false },
-{ id: 196, x: 1755925.763, y: 5930804.283, blocked: false },
-{ id: 197, x: 1756630.82, y: 5931459.733, blocked: false },
-{ id: 198, x: 1755881.771, y: 5931858.762, blocked: false },
-{ id: 199, x: 1756753.622, y: 5931951.638, blocked: false },
-{ id: 200, x: 1755875.418, y: 5931493.263, blocked: false },
-{ id: 201, x: 1756647.269, y: 5930501.827, blocked: false },
-{ id: 202, x: 1757159.927, y: 5931947.68, blocked: false },
-{ id: 203, x: 1755955.856, y: 5930703.221, blocked: false },
-{ id: 204, x: 1755665.33, y: 5930773.363, blocked: false },
-{ id: 205, x: 1756160.93, y: 5930831.878, blocked: false },
-{ id: 206, x: 1756316.623, y: 5930981.738, blocked: false },
-{ id: 207, x: 1756563.426, y: 5931475.783, blocked: false },
-{ id: 208, x: 1756982.562, y: 5931931.942, blocked: false },
-{ id: 209, x: 1755801.194, y: 5931026.452, blocked: false },
-{ id: 210, x: 1757322.033, y: 5930875.672, blocked: false },
-{ id: 211, x: 1756613.767, y: 5931652.437, blocked: false },
-{ id: 212, x: 1757161.687, y: 5931734.8, blocked: false },
-{ id: 213, x: 1755755.653, y: 5931070.118, blocked: false },
-{ id: 214, x: 1756369.92, y: 5931838.689, blocked: false },
-{ id: 215, x: 1757187.955, y: 5931164.136, blocked: false },
-{ id: 216, x: 1756751.983, y: 5931523.681, blocked: false },
-{ id: 217, x: 1755741.977, y: 5930603.684, blocked: false },
-{ id: 218, x: 1756257.181, y: 5930507.219, blocked: false },
-{ id: 219, x: 1757800.099, y: 5930500.408, blocked: false },
-{ id: 220, x: 1757097.744, y: 5930748.932, blocked: false },
-{ id: 221, x: 1755863.636, y: 5931333.079, blocked: false },
-{ id: 222, x: 1756061.744, y: 5931916.101, blocked: false },
-{ id: 223, x: 1755932.695, y: 5931457.608, blocked: false },
-{ id: 224, x: 1755945.835, y: 5931884.684, blocked: false },
-{ id: 225, x: 1756155.376, y: 5930786.792, blocked: false },
-{ id: 226, x: 1756587.795, y: 5931945.567, blocked: false },
-{ id: 227, x: 1756141.9, y: 5931228.7, blocked: false },
-{ id: 228, x: 1756859.191, y: 5931702.256, blocked: false },
-{ id: 229, x: 1755712.258, y: 5931536.239, blocked: false },
-{ id: 230, x: 1757674.139, y: 5930488.056, blocked: false },
-{ id: 231, x: 1756394.255, y: 5931986.947, blocked: false },
-{ id: 232, x: 1756286.547, y: 5931824.254, blocked: false },
-{ id: 233, x: 1756544.037, y: 5931599.791, blocked: false },
-{ id: 234, x: 1757334.113, y: 5931631.722, blocked: false },
-{ id: 235, x: 1755681.8, y: 5931229.308, blocked: false },
-{ id: 236, x: 1757459.4, y: 5930772.0, blocked: false },
-{ id: 237, x: 1756802.571, y: 5931609.248, blocked: false },
-{ id: 238, x: 1755821.884, y: 5931148.247, blocked: false },
-{ id: 239, x: 1756663.655, y: 5931502.96, blocked: false },
-{ id: 240, x: 1755758.301, y: 5930947.324, blocked: false },
-{ id: 241, x: 1755937.152, y: 5930750.698, blocked: false },
-{ id: 242, x: 1757314.109, y: 5931682.184, blocked: false },
-{ id: 243, x: 1755860.656, y: 5931619.716, blocked: false },
-{ id: 244, x: 1756258.067, y: 5931023.771, blocked: false },
-{ id: 245, x: 1756581.29, y: 5930549.733, blocked: false },
-{ id: 246, x: 1757047.755, y: 5930771.086, blocked: false },
-{ id: 247, x: 1755841.087, y: 5930862.648, blocked: false },
-{ id: 248, x: 1757216.781, y: 5930586.231, blocked: false },
-{ id: 249, x: 1756303.655, y: 5931046.466, blocked: false },
-{ id: 250, x: 1756959.531, y: 5930949.959, blocked: false },
-{ id: 251, x: 1756912.1, y: 5931863.2, blocked: false },
-{ id: 252, x: 1757406.908, y: 5930480.627, blocked: false },
-{ id: 253, x: 1756831.75, y: 5931648.092, blocked: false },
-{ id: 254, x: 1757050.059, y: 5931463.636, blocked: false },
-{ id: 255, x: 1756537.161, y: 5930575.084, blocked: false },
-{ id: 256, x: 1756780.547, y: 5931613.585, blocked: false },
-{ id: 257, x: 1755875.0, y: 5931843.0, blocked: false },
-{ id: 258, x: 1756433.926, y: 5931912.635, blocked: false },
-{ id: 259, x: 1756711.582, y: 5931952.146, blocked: false },
-{ id: 260, x: 1757061.308, y: 5931994.911, blocked: false },
-{ id: 261, x: 1757310.9, y: 5931657.51, blocked: false },
-{ id: 262, x: 1757553.674, y: 5930667.768, blocked: false },
-{ id: 263, x: 1756016.23, y: 5931048.319, blocked: false },
-{ id: 264, x: 1757438.439, y: 5930997.35, blocked: false },
-{ id: 265, x: 1755930.356, y: 5930796.631, blocked: false },
-{ id: 266, x: 1757148.385, y: 5931871.475, blocked: false },
-{ id: 267, x: 1756151.402, y: 5931028.596, blocked: false },
-{ id: 268, x: 1757204.059, y: 5931289.796, blocked: false },
-{ id: 269, x: 1756572.95, y: 5931561.18, blocked: false },
-{ id: 270, x: 1756162.848, y: 5930783.662, blocked: false },
-{ id: 271, x: 1757337.38, y: 5931543.586, blocked: false },
-{ id: 272, x: 1756067.613, y: 5930659.008, blocked: false },
-{ id: 273, x: 1756998.437, y: 5931935.328, blocked: false },
-{ id: 274, x: 1755813.985, y: 5930813.734, blocked: false },
-{ id: 275, x: 1757574.775, y: 5930689.321, blocked: false },
-{ id: 276, x: 1755670.309, y: 5931514.807, blocked: false },
-{ id: 277, x: 1756606.538, y: 5931935.191, blocked: false },
-{ id: 278, x: 1755634.176, y: 5931597.728, blocked: false },
-{ id: 279, x: 1755984.209, y: 5931005.978, blocked: false },
-{ id: 280, x: 1756630.396, y: 5931681.875, blocked: false },
-{ id: 281, x: 1755920.039, y: 5931507.82, blocked: false },
-{ id: 282, x: 1756378.902, y: 5931833.387, blocked: false },
-{ id: 283, x: 1755667.41, y: 5931052.888, blocked: false },
-{ id: 284, x: 1757331.049, y: 5931744.883, blocked: false },
-{ id: 285, x: 1755889.811, y: 5931997.396, blocked: false },
-{ id: 286, x: 1756007.069, y: 5931674.814, blocked: false },
-{ id: 287, x: 1757083.428, y: 5930618.423, blocked: false },
-{ id: 288, x: 1755921.372, y: 5931729.405, blocked: false },
-{ id: 289, x: 1756651.653, y: 5931949.407, blocked: false },
-{ id: 290, x: 1757408.385, y: 5931143.995, blocked: false },
-{ id: 291, x: 1756749.964, y: 5931531.073, blocked: false },
-{ id: 292, x: 1755740.465, y: 5930613.229, blocked: false },
-{ id: 293, x: 1756107.828, y: 5930589.665, blocked: false },
-{ id: 294, x: 1756145.536, y: 5930495.904, blocked: false },
-{ id: 295, x: 1756900.243, y: 5930778.024, blocked: false },
-{ id: 296, x: 1755912.57, y: 5930640.238, blocked: false },
-{ id: 297, x: 1755976.8, y: 5930917.489, blocked: false },
-{ id: 298, x: 1756152.548, y: 5930967.048, blocked: false },
-{ id: 299, x: 1757328.33, y: 5931105.495, blocked: false },
-{ id: 300, x: 1756951.618, y: 5930534.213, blocked: false },
-{ id: 301, x: 1755713.016, y: 5931909.048, blocked: false },
-{ id: 302, x: 1757506.383, y: 5930775.892, blocked: false },
-{ id: 303, x: 1756028.862, y: 5930638.969, blocked: false },
-{ id: 304, x: 1757692.087, y: 5930490.063, blocked: false },
-{ id: 305, x: 1757288.083, y: 5930954.306, blocked: false },
-{ id: 306, x: 1755939.364, y: 5930538.662, blocked: false },
-{ id: 307, x: 1755801.753, y: 5931246.884, blocked: false },
-{ id: 308, x: 1757308.5, y: 5931260.2, blocked: false },
-{ id: 309, x: 1756517.103, y: 5930491.817, blocked: false },
-{ id: 310, x: 1757015.562, y: 5931056.027, blocked: false },
-{ id: 311, x: 1755642.259, y: 5931567.747, blocked: false },
-{ id: 312, x: 1756758.229, y: 5931749.554, blocked: false },
-{ id: 313, x: 1757613.3, y: 5930664.805, blocked: false },
-{ id: 314, x: 1755674.427, y: 5931523.993, blocked: false },
-{ id: 315, x: 1756537.067, y: 5931600.017, blocked: false },
-{ id: 316, x: 1757287.652, y: 5931843.066, blocked: false },
-{ id: 317, x: 1755860.248, y: 5931053.875, blocked: false },
-{ id: 318, x: 1755817.278, y: 5931275.934, blocked: false },
-{ id: 319, x: 1757004.032, y: 5930791.863, blocked: false },
-{ id: 320, x: 1756889.333, y: 5931602.025, blocked: false },
-{ id: 321, x: 1755761.89, y: 5930950.44, blocked: false },
-{ id: 322, x: 1755621.167, y: 5931601.693, blocked: false },
-{ id: 323, x: 1757252.736, y: 5931680.436, blocked: false },
-{ id: 324, x: 1757315.258, y: 5930619.367, blocked: false },
-{ id: 325, x: 1756738.916, y: 5931403.384, blocked: false },
-{ id: 326, x: 1757369.916, y: 5931247.842, blocked: false },
-{ id: 327, x: 1755763.902, y: 5930842.945, blocked: false },
-{ id: 328, x: 1755849.604, y: 5930926.416, blocked: false },
-{ id: 329, x: 1756084.188, y: 5931058.311, blocked: false },
-{ id: 330, x: 1757549.158, y: 5930571.473, blocked: false },
-{ id: 331, x: 1757060.992, y: 5931599.255, blocked: false },
-{ id: 332, x: 1756753.125, y: 5931955.73, blocked: false },
-{ id: 333, x: 1757342.518, y: 5931019.046, blocked: false },
-{ id: 334, x: 1757404.403, y: 5931379.593, blocked: false },
-{ id: 335, x: 1755874.17, y: 5931210.23, blocked: false },
-{ id: 336, x: 1756202.691, y: 5931695.916, blocked: false },
-{ id: 337, x: 1756026.11, y: 5931362.9, blocked: false },
-{ id: 338, x: 1755772.9, y: 5931739.115, blocked: false },
-{ id: 339, x: 1756199.809, y: 5931792.968, blocked: false },
-{ id: 340, x: 1756341.271, y: 5930976.429, blocked: false },
-{ id: 341, x: 1757038.034, y: 5930729.291, blocked: false },
-{ id: 342, x: 1757084.475, y: 5930969.212, blocked: false },
-{ id: 343, x: 1756134.322, y: 5931698.519, blocked: false },
-{ id: 344, x: 1756756.787, y: 5931874.533, blocked: false },
-{ id: 345, x: 1755678.737, y: 5930589.775, blocked: false },
-{ id: 346, x: 1757667.992, y: 5930604.657, blocked: false },
-{ id: 347, x: 1757380.11, y: 5931804.891, blocked: false },
-{ id: 348, x: 1756924.971, y: 5930802.967, blocked: false },
-{ id: 349, x: 1756712.192, y: 5931643.258, blocked: false },
-{ id: 350, x: 1757708.621, y: 5930511.917, blocked: false },
-{ id: 351, x: 1756733.812, y: 5930610.485, blocked: false },
-{ id: 352, x: 1756081.673, y: 5931050.881, blocked: false },
-{ id: 353, x: 1755970.565, y: 5930871.015, blocked: false },
-{ id: 354, x: 1755733.962, y: 5931330.143, blocked: false },
-{ id: 355, x: 1755922.797, y: 5931908.382, blocked: false },
-{ id: 356, x: 1755829.729, y: 5931990.352, blocked: false },
-{ id: 357, x: 1756070.109, y: 5931932.645, blocked: false },
-{ id: 358, x: 1756905.262, y: 5931435.288, blocked: false },
-{ id: 359, x: 1756006.354, y: 5930689.66, blocked: false },
-{ id: 360, x: 1755671.776, y: 5930713.992, blocked: false },
-{ id: 361, x: 1756303.976, y: 5930793.933, blocked: false },
-{ id: 362, x: 1756454.855, y: 5931959.954, blocked: false },
-{ id: 363, x: 1756281.567, y: 5931977.904, blocked: false },
-{ id: 364, x: 1756571.168, y: 5930600.073, blocked: false },
-{ id: 365, x: 1755689.919, y: 5931451.927, blocked: false },
-{ id: 366, x: 1756292.507, y: 5930679.252, blocked: false },
-{ id: 367, x: 1755921.987, y: 5931059.918, blocked: false },
-{ id: 368, x: 1755832.915, y: 5931144.995, blocked: false },
-{ id: 369, x: 1755705.006, y: 5931391.3, blocked: false },
-{ id: 370, x: 1756861.82, y: 5930730.21, blocked: false },
-{ id: 371, x: 1757048.0, y: 5931463.9, blocked: false },
-{ id: 372, x: 1755727.055, y: 5931221.054, blocked: false },
-{ id: 373, x: 1756907.711, y: 5931619.734, blocked: false },
-{ id: 374, x: 1755676.547, y: 5930651.758, blocked: false },
-{ id: 375, x: 1757374.55, y: 5930743.722, blocked: false },
-{ id: 376, x: 1756171.806, y: 5930603.686, blocked: false },
-{ id: 377, x: 1756755.41, y: 5931827.444, blocked: false },
-{ id: 378, x: 1757201.834, y: 5931309.081, blocked: false },
-{ id: 379, x: 1755871.543, y: 5931066.647, blocked: false },
-{ id: 380, x: 1755792.412, y: 5931303.797, blocked: false },
-{ id: 381, x: 1757382.484, y: 5931473.131, blocked: false },
-{ id: 382, x: 1757179.702, y: 5931693.423, blocked: false },
-{ id: 383, x: 1756598.224, y: 5931462.972, blocked: false },
-{ id: 384, x: 1755767.172, y: 5930841.665, blocked: false },
-{ id: 385, x: 1756507.135, y: 5931916.829, blocked: false },
-{ id: 386, x: 1755759.523, y: 5930797.52, blocked: false },
-{ id: 387, x: 1755922.495, y: 5931693.448, blocked: false },
-{ id: 388, x: 1757430.677, y: 5930633.729, blocked: false },
-{ id: 389, x: 1755860.003, y: 5930923.81, blocked: false },
-{ id: 390, x: 1755636.829, y: 5931563.37, blocked: false },
-{ id: 391, x: 1756271.503, y: 5931986.819, blocked: false },
-{ id: 392, x: 1756750.121, y: 5931945.864, blocked: false },
-{ id: 393, x: 1756340.828, y: 5930918.655, blocked: false },
-{ id: 394, x: 1755868.469, y: 5931496.919, blocked: false },
-{ id: 395, x: 1757157.089, y: 5931934.816, blocked: false },
-{ id: 396, x: 1757363.404, y: 5931476.511, blocked: false },
-{ id: 397, x: 1755963.814, y: 5930698.512, blocked: false },
-{ id: 398, x: 1757102.411, y: 5930756.694, blocked: false },
-{ id: 399, x: 1756135.303, y: 5931688.05, blocked: false },
-{ id: 400, x: 1755924.972, y: 5931487.232, blocked: false },
-{ id: 401, x: 1756509.635, y: 5930513.107, blocked: false },
-{ id: 402, x: 1756725.376, y: 5931947.924, blocked: false },
-{ id: 403, x: 1757163.387, y: 5931724.946, blocked: false },
-{ id: 404, x: 1757636.51, y: 5930669.247, blocked: false },
-{ id: 405, x: 1755807.693, y: 5931991.071, blocked: false },
-{ id: 406, x: 1756872.678, y: 5930749.999, blocked: false },
-{ id: 407, x: 1756618.625, y: 5931669.748, blocked: false },
-{ id: 408, x: 1755949.247, y: 5931874.526, blocked: false },
-{ id: 409, x: 1755689.153, y: 5931317.46, blocked: false },
-{ id: 410, x: 1755706.216, y: 5931012.396, blocked: false },
-{ id: 411, x: 1757365.643, y: 5931791.622, blocked: false },
-{ id: 412, x: 1755708.335, y: 5931540.236, blocked: false },
-{ id: 413, x: 1757446.3, y: 5930782.5, blocked: false },
-{ id: 414, x: 1756130.311, y: 5930618.094, blocked: false },
-{ id: 415, x: 1756560.084, y: 5930485.829, blocked: false },
-{ id: 416, x: 1757242.061, y: 5931989.192, blocked: false },
-{ id: 417, x: 1756139.163, y: 5931197.759, blocked: false },
-{ id: 418, x: 1757452.321, y: 5930887.769, blocked: false },
-{ id: 419, x: 1756070.2, y: 5930528.037, blocked: false },
-{ id: 420, x: 1756602.076, y: 5930519.005, blocked: false },
-{ id: 421, x: 1756464.729, y: 5931956.753, blocked: false },
-{ id: 422, x: 1755907.27, y: 5931054.433, blocked: false },
-{ id: 423, x: 1756337.434, y: 5931798.975, blocked: false },
-{ id: 424, x: 1755669.807, y: 5930651.895, blocked: false },
-{ id: 425, x: 1757457.6, y: 5930764.0, blocked: false },
-{ id: 426, x: 1756878.845, y: 5931602.274, blocked: false },
-{ id: 427, x: 1756016.487, y: 5931991.752, blocked: false },
-{ id: 428, x: 1757356.4, y: 5931639.28, blocked: false },
-{ id: 429, x: 1756059.606, y: 5930688.837, blocked: false },
-{ id: 430, x: 1756617.638, y: 5930586.82, blocked: false },
-{ id: 431, x: 1757013.576, y: 5930781.57, blocked: false },
-{ id: 432, x: 1755850.871, y: 5930688.166, blocked: false },
-{ id: 433, x: 1757414.946, y: 5930476.165, blocked: false },
-{ id: 434, x: 1757025.493, y: 5931903.366, blocked: false },
-{ id: 435, x: 1756723.632, y: 5931501.022, blocked: false },
-{ id: 436, x: 1757318.366, y: 5931119.483, blocked: false },
-{ id: 437, x: 1757350.121, y: 5931565.004, blocked: false },
-{ id: 438, x: 1756811.822, y: 5930702.519, blocked: false },
-{ id: 439, x: 1755927.502, y: 5930748.798, blocked: false },
-{ id: 440, x: 1756947.032, y: 5930519.805, blocked: false },
-{ id: 441, x: 1756881.9, y: 5930818.8, blocked: false },
-{ id: 442, x: 1757178.288, y: 5930765.35, blocked: false },
-{ id: 443, x: 1756162.287, y: 5930673.737, blocked: false },
-{ id: 444, x: 1757325.164, y: 5931640.346, blocked: false },
-{ id: 445, x: 1756304.351, y: 5930629.658, blocked: false },
-{ id: 446, x: 1755833.106, y: 5931745.594, blocked: false },
-{ id: 447, x: 1757067.012, y: 5931988.217, blocked: false },
-{ id: 448, x: 1756552.237, y: 5931525.634, blocked: false },
-{ id: 449, x: 1757369.592, y: 5931473.519, blocked: false },
-{ id: 450, x: 1755738.413, y: 5930865.715, blocked: false },
-{ id: 451, x: 1756478.914, y: 5931852.197, blocked: false },
-{ id: 452, x: 1755771.106, y: 5930995.257, blocked: false },
-{ id: 453, x: 1756424.772, y: 5931917.943, blocked: false },
-{ id: 454, x: 1755971.726, y: 5931333.556, blocked: false },
-{ id: 455, x: 1757683.839, y: 5930578.379, blocked: false },
-{ id: 456, x: 1757263.595, y: 5931075.882, blocked: false },
-{ id: 457, x: 1756009.416, y: 5931318.224, blocked: false },
-{ id: 458, x: 1755965.604, y: 5930915.066, blocked: false },
-{ id: 459, x: 1757140.301, y: 5931564.77, blocked: false },
-{ id: 460, x: 1756123.606, y: 5931038.043, blocked: false },
-{ id: 461, x: 1755657.903, y: 5931508.787, blocked: false },
-{ id: 462, x: 1757382.971, y: 5931737.768, blocked: false },
-{ id: 463, x: 1755711.043, y: 5931277.515, blocked: false },
-{ id: 464, x: 1755934.448, y: 5930545.732, blocked: false },
-{ id: 465, x: 1757080.042, y: 5931629.832, blocked: false },
-{ id: 466, x: 1755751.253, y: 5931466.253, blocked: false },
-{ id: 467, x: 1756067.704, y: 5930753.149, blocked: false },
-{ id: 468, x: 1756911.17, y: 5930789.469, blocked: false },
-{ id: 469, x: 1757309.188, y: 5931097.027, blocked: false },
-{ id: 470, x: 1755971.726, y: 5931333.556, blocked: false },
-{ id: 471, x: 1756101.342, y: 5930591.706, blocked: false },
-{ id: 472, x: 1755890.718, y: 5931986.695, blocked: false },
-{ id: 473, x: 1756064.105, y: 5931691.761, blocked: false },
-{ id: 474, x: 1755776.157, y: 5931489.272, blocked: false },
-{ id: 475, x: 1757280.815, y: 5930947.396, blocked: false },
-{ id: 476, x: 1757413.868, y: 5931190.467, blocked: false },
-{ id: 477, x: 1756066.067, y: 5930644.176, blocked: false },
-{ id: 478, x: 1755650.493, y: 5930945.398, blocked: false },
-{ id: 479, x: 1757006.069, y: 5931053.108, blocked: false },
-{ id: 480, x: 1755744.414, y: 5930703.53, blocked: false },
-{ id: 481, x: 1755652.411, y: 5931708.564, blocked: false },
-{ id: 482, x: 1756718.296, y: 5931683.434, blocked: false },
-{ id: 483, x: 1756895.461, y: 5931599.249, blocked: false },
-{ id: 484, x: 1755675.325, y: 5931638.918, blocked: false },
-{ id: 485, x: 1757594.661, y: 5930625.838, blocked: false },
-{ id: 486, x: 1755674.943, y: 5931443.526, blocked: false }
-  ];
+    const [imageBounds, setImageBounds] = useState(null);
+    const [catchpits, setCatchpits] = useState([]);
 
-  // State to manage the catchpit data
-  const [catchpits, setCatchpits] = useState(initialData);
+    // Pixel adjustments for marker positions
+    const xAdjust = 10;
+    const yAdjust = 10;
 
-  // Toggle the blocked/unblocked state when a point is clicked
-  const toggleBlocked = (id) => {
-    setCatchpits((prevCatchpits) =>
-      prevCatchpits.map((catchpit) =>
-        catchpit.id === id ? { ...catchpit, blocked: !catchpit.blocked } : catchpit
-      )
+    useEffect(() => {
+        fetch(`${process.env.PUBLIC_URL}/catchpits.geojson`)
+            .then((response) => response.json())
+            .then((catchpitsData) => {
+                let minLat = Infinity;
+                let maxLat = -Infinity;
+                let minLng = Infinity;
+                let maxLng = -Infinity;
+
+                const convertedFeatures = catchpitsData.features.map((feature, index) => {
+                    const [x, y] = feature.geometry.coordinates;
+                    const point = L.point(x, y);
+                    const latLng = L.CRS.EPSG3857.unproject(point);
+                    const latitude = latLng.lat;
+                    const longitude = latLng.lng;
+
+                    if (latitude < minLat) minLat = latitude;
+                    if (latitude > maxLat) maxLat = latitude;
+                    if (longitude < minLng) minLng = longitude;
+                    if (longitude > maxLng) maxLng = longitude;
+
+                    return {
+                        ...feature,
+                        id: feature.id || index,
+                        properties: {
+                            ...feature.properties,
+                            blocked: feature.properties.blocked || false,
+                        },
+                        geometry: {
+                            ...feature.geometry,
+                            coordinates: [longitude, latitude],
+                        },
+                    };
+                });
+
+                const imageWidth = 3350;
+                const imageHeight = 3000;
+                const imageAspectRatio = imageWidth / imageHeight;
+                const imageWidthDegrees = maxLng - minLng;
+                const imageHeightDegrees = imageWidthDegrees / imageAspectRatio;
+                const adjustedMinLat = maxLat - imageHeightDegrees;
+
+                setImageBounds([
+                    [adjustedMinLat, minLng],
+                    [maxLat, maxLng],
+                ]);
+
+                setCatchpits(convertedFeatures);
+            })
+            .catch((error) => {
+                console.error('Error fetching catchpits data:', error);
+            });
+    }, []);
+
+    const toggleBlocked = (id) => {
+        setCatchpits((prevCatchpits) =>
+            prevCatchpits.map((feature) =>
+                feature.id === id
+                    ? {
+                        ...feature,
+                        properties: {
+                            ...feature.properties,
+                            blocked: !feature.properties.blocked,
+                        },
+                    }
+                    : feature
+            )
+        );
+    };
+
+    return (
+        <MapContainer center={[-36.751697, 174.754]} zoom={15} style={{ height: '600px', width: '100%' }}>
+            {imageBounds && (
+                <ImageOverlay url={newAreaDataImage} bounds={imageBounds} opacity={0.8} />
+            )}
+
+            <CatchpitsMarkers
+                catchpits={catchpits}
+                toggleBlocked={toggleBlocked}
+                xAdjust={xAdjust}
+                yAdjust={yAdjust}
+            />
+        </MapContainer>
     );
-  };
-
-  // Prepare data for the scatter plot
-  const scatterData = {
-    datasets: [
-      {
-        label: 'Catchpits',
-        data: catchpits.map((catchpit) => ({
-          x: catchpit.x,
-          y: catchpit.y,
-          id: catchpit.id
-        })),
-        pointBackgroundColor: catchpits.map((catchpit) => (catchpit.blocked ? 'red' : 'green')),
-        pointBorderColor: '#fff',
-        pointRadius: 8
-      }
-    ]
-  };
-
-  // Options for the scatter plot
-  const options = {
-    onClick: (event, elements) => {
-      if (elements.length > 0) {
-        const index = elements[0].index;
-        const id = scatterData.datasets[0].data[index].id;
-        toggleBlocked(id);
-      }
-    },
-    scales: {
-      x: {
-        title: {
-          display: true,
-          text: 'X Coordinate'
-        }
-      },
-      y: {
-        title: {
-          display: true,
-          text: 'Y Coordinate'
-        }
-      }
-    }
-  };
-
-  return (
-    <div>
-      <h2>Catchpit Blockage Management</h2>
-      <Scatter data={scatterData} options={options} />
-    </div>
-  );
 };
 
 export default Catchpits;
