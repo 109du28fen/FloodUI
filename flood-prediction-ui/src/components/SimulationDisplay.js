@@ -1,34 +1,23 @@
 import React from 'react';
-import { Unity, useUnityContext } from 'react-unity-webgl';
 
 const SimulationDisplay = () => {
-    const { unityProvider, loadingProgression, isLoaded } = useUnityContext({
-        loaderUrl: "/Simulation/Build/Simulation.loader.js", // È·±£Â·¾¶Óë public ÖĞµÄÎÄ¼şÆ¥Åä
-        dataUrl: "/Simulation/Build/Simulation.data",
-        frameworkUrl: "/Simulation/Build/Simulation.framework.js",
-        codeUrl: "/Simulation/Build/Simulation.wasm",
-    });
-
     return (
         <div style={styles.container}>
             <h2>Simulation Results</h2>
 
-            {/* ÏÔÊ¾¼ÓÔØ½ø¶È */}
-            {!isLoaded && (
-                <div style={styles.loadingBar}>
-                    <p>Loading... {Math.round(loadingProgression * 100)}%</p>
-                </div>
-            )}
-
-            {/* Unity Canvas ÈİÆ÷ */}
+            {/* ä½¿ç”¨ iframe åµŒå…¥ 127.0.0.1:8080 çš„å†…å®¹ */}
             <div style={styles.displayArea}>
-                <Unity unityProvider={unityProvider} style={styles.unityCanvas} />
+                <iframe
+                    src="http://127.0.0.1:8080"
+                    style={styles.iframe}
+                    title="127.0.0.1 Content"
+                />
             </div>
         </div>
     );
 };
 
-// ÑùÊ½¶¨Òå
+// æ ·å¼å®šä¹‰
 const styles = {
     container: {
         padding: '20px',
@@ -38,8 +27,8 @@ const styles = {
         marginTop: '20px',
     },
     displayArea: {
-        width: '960px', // ÉèÖÃ Unity ÈİÆ÷µÄ¿í¶È
-        height: '540px', // ÉèÖÃ Unity ÈİÆ÷µÄ¸ß¶È
+        width: '960px', // è®¾ç½® iframe å®¹å™¨çš„å®½åº¦
+        height: '540px', // è®¾ç½® iframe å®¹å™¨çš„é«˜åº¦
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
@@ -47,14 +36,10 @@ const styles = {
         border: '2px dashed #ccc',
         margin: '0 auto',
     },
-    unityCanvas: {
+    iframe: {
         width: '100%',
         height: '100%',
-    },
-    loadingBar: {
-        margin: '20px 0',
-        textAlign: 'center',
-        color: '#333',
+        border: 'none', // ç§»é™¤ iframe çš„é»˜è®¤è¾¹æ¡†
     },
 };
 
